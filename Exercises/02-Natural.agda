@@ -17,7 +17,9 @@ zero + y = y
 {-# BUILTIN NATPLUS _+_ #-}
 
 _-_ : Natural → Natural → Natural
-x - y = {!!}
+x - zero = x
+zero - suc y = zero
+suc x - suc y = x - y
 
 _*_ : Natural → Natural → Natural
 zero * y = zero
@@ -25,7 +27,8 @@ suc x * y = y + (x * y)
 {-# BUILTIN NATTIMES _*_ #-}
 
 _^_ : Natural → Natural → Natural
-x ^ y = {!!}
+x ^ zero = 1
+x ^ suc y = x * (x ^ y)
 
 open import Agda.Primitive using (Level)
 data _≡_ {ℓ : Level} {X : Set ℓ} (x : X) : X → Set ℓ where
@@ -42,19 +45,19 @@ x ≢ y = x ≡ y → Empty
 0+0 = equal
 
 2+2 : 2 + 2 ≡ 4
-2+2 = {!!}
+2+2 = equal
 
 2+2≢5 : 2 + 2 ≢ 5
-2+2≢5 ()
+2+2≢5 = λ ()
 
 1+1≢3 : 1 + 1 ≢ 3
-1+1≢3 = {!!}
+1+1≢3 = λ ()
 
 2^3 : 2 ^ 3 ≡ 8
-2^3 = {!!}
+2^3 = equal
 
 2^8 : 2 ^ 8 ≡ 256
-2^8 = {!!}
+2^8 = equal
 
 0*x : (x : Natural) → 0 * x ≡ 0
 0*x x = equal
@@ -84,17 +87,20 @@ x+0 zero = equal -- Goal: zero + 0 ≡ zero
 x+0 (suc x) rewrite x+0 x = equal -- Goal: suc x + 0 ≡ suc x
 
 x*1 : (x : Natural) → x * 1 ≡ x
-x*1 x = {!!}
+x*1 zero = equal
+x*1 (suc x) rewrite x*1 x = equal
 
 1*x : (x : Natural) → 1 * x ≡ x
-1*x x = {!!}
+1*x zero = equal
+1*x (suc x) rewrite 1*x x = equal
 
 +-associative : (x y z : Natural) → (x + y) + z ≡ x + (y + z)
 +-associative zero y z = equal
 +-associative (suc x) y z rewrite +-associative x y z = equal
 
 +-suc : (x y : Natural) → x + suc y ≡ suc (x + y)
-+-suc x y = {!!}
++-suc zero y = equal
++-suc (suc x) y rewrite +-suc x y = equal
 
 +-commutative : (x y : Natural) → x + y ≡ y + x
 +-commutative zero y rewrite x+0 y = equal
@@ -104,10 +110,18 @@ x*1 x = {!!}
   = equal
 
 +*-dist : (x y z : Natural) → (x + y) * z ≡ (x * z) + (y * z)
-+*-dist x y z = {!!}
++*-dist zero y z = equal
++*-dist (suc x) y z
+  rewrite +*-dist x y z
+  | +-associative z (x * z) (y * z)
+  = equal
 
 *-associative : (x y z : Natural) → (x * y) * z ≡ x * (y * z)
-*-associative x y z = {!!}
+*-associative zero y z = equal
+*-associative (suc x) y z
+  rewrite +*-dist y (x * y) z
+  | *-associative x y z
+  = equal
 
 *-suc : (x y : Natural) → x * suc y ≡ x + (x * y)
 *-suc zero y = equal
@@ -119,7 +133,11 @@ x*1 x = {!!}
   = equal
 
 *-commutative : (x y : Natural) → x * y ≡ y * x
-*-commutative x y = {!!}
+*-commutative zero y rewrite x*0 y = equal
+*-commutative (suc x) y
+  rewrite *-suc y x
+  | *-commutative x y
+  = equal
 
 data _≤_ : Natural → Natural → Set where
   zero≤ : (y : Natural) → zero ≤ y
@@ -141,32 +159,53 @@ antisymmetry .0 .0 (zero≤ .0) (zero≤ .0) = equal
 antisymmetry .(suc x) .(suc y) (suc≤suc x y left) (suc≤suc .y .x right) rewrite antisymmetry x y left right = equal
 
 transitivity : (x y z : Natural) → x ≤ y → y ≤ z → x ≤ z
-transitivity x y z left right = {!!}
+transitivity .0 y z (zero≤ .y) right = zero≤ z
+transitivity .(suc x) .(suc y) .(suc z) (suc≤suc x y left) (suc≤suc .y z right) = suc≤suc x z (transitivity x y z left right)
 
 data Boolean : Set where
   true false : Boolean
 
 _≤?_ : Natural → Natural → Boolean
-x ≤? y = {!!}
+zero ≤? y = true
+suc x ≤? zero = false
+suc x ≤? suc y = x ≤? y
 
 2≤?3 : 2 ≤? 3 ≡ true
-2≤?3 = {!!}
+2≤?3 = equal
 
 3≤?2 : 3 ≤? 2 ≡ false
-3≤?2 = {!!}
+3≤?2 = equal
 
 equal≤? : (x y : Natural) → x ≡ y → x ≤? y ≡ true
-equal≤? x y p = {!!}
+equal≤? zero .0 equal = equal
+equal≤? (suc x) .(suc x) equal = equal≤? x x equal
+
+suc≤? : (x y : Natural) → x ≤? y ≡ true → (suc x) ≤? (suc y) ≡ true
+suc≤? zero y p = equal
+suc≤? (suc x) zero ()
+suc≤? (suc x) (suc y) p = p
 
 antisymmetry-bool : (x y : Natural) → x ≤? y ≡ true → y ≤? x ≡ true → x ≡ y
-antisymmetry-bool x y left right = {!!}
+antisymmetry-bool zero zero left right = equal
+antisymmetry-bool zero (suc y) equal ()
+antisymmetry-bool (suc x) zero () right
+antisymmetry-bool (suc x) (suc y) left right rewrite antisymmetry-bool x y left right = equal
 
 data Total≤? (x y : Natural) : Set where
   x≤?y : x ≤? y ≡ true → Total≤? x y
   y≤?x : y ≤? x ≡ true → Total≤? x y
 
+suc-Total≤? : (x y : Natural) → Total≤? x y → Total≤? (suc x) (suc y)
+suc-Total≤? x y (x≤?y p) = x≤?y (suc≤? x y p)
+suc-Total≤? x y (y≤?x p) = y≤?x (suc≤? y x p)
+
 totality-bool : (x y : Natural) → Total≤? x y
-totality-bool x y = {!!}
+totality-bool zero y = x≤?y equal
+totality-bool (suc x) zero = y≤?x equal
+totality-bool (suc x) (suc y) = suc-Total≤? x y (totality-bool x y)
 
 transitivity-bool : (x y z : Natural) → x ≤? y ≡ true → y ≤? z ≡ true → x ≤? z ≡ true
-transitivity-bool x y z left right = {!!}
+transitivity-bool zero y z left right = equal
+transitivity-bool (suc x) zero z () right
+transitivity-bool (suc x) (suc y) zero left ()
+transitivity-bool (suc x) (suc y) (suc z) left right rewrite transitivity-bool x y z left right = equal
